@@ -33,6 +33,9 @@
                     <span class="status-dot online"></span>
                     <span class="status-text">Connected</span>
                 </div>
+                <button id="themeToggleBtn" class="btn btn-secondary btn-icon" title="Toggle Light/Dark Theme" aria-label="Toggle Light/Dark Theme">
+                    <i data-lucide="sun" id="themeIcon"></i>
+                </button>
                 <button id="refreshBtn" class="btn btn-secondary btn-icon" title="Refresh Release Notes">
                     <i data-lucide="refresh-cw" id="refreshIcon"></i>
                     <span class="btn-label">Refresh</span>
@@ -121,6 +124,9 @@
                         <span class="results-meta" id="resultsMeta">Loading updates...</span>
                     </div>
                     <div class="feed-view-options">
+                        <button id="exportCsvBtn" class="btn btn-text btn-sm" title="Export currently filtered updates to CSV">
+                            <i data-lucide="download"></i> Export CSV
+                        </button>
                         <button id="selectAllBtn" class="btn btn-text btn-sm" title="Select all filtered updates">
                             <i data-lucide="check-square"></i> Select All
                         </button>

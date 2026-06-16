@@ -48,6 +48,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Selection elements
     const selectAllBtn = document.getElementById('selectAllBtn');
     const clearSelectionBtn = document.getElementById('clearSelectionBtn');
+    const exportCsvBtn = document.getElementById('exportCsvBtn');
+    
+    // Theme elements
+    const themeToggleBtn = document.getElementById('themeToggleBtn');
+    const themeIcon = document.getElementById('themeIcon');
     
     // Composer elements
     const selectedCount = document.getElementById('selectedCount');
@@ -61,11 +66,36 @@ document.addEventListener('DOMContentLoaded', () => {
     const toastContainer = document.getElementById('toastContainer');
     const templateOptions = document.querySelectorAll('.template-option');
 
+    // Initialize theme
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    if (savedTheme === 'light') {
+        document.body.classList.add('light-theme');
+        if (themeIcon) themeIcon.setAttribute('data-lucide', 'moon');
+    } else {
+        if (themeIcon) themeIcon.setAttribute('data-lucide', 'sun');
+    }
+
     // Initialize the app
     fetchReleases();
 
     // Event Listeners
     refreshBtn.addEventListener('click', fetchReleases);
+    
+    // Theme toggle listener
+    if (themeToggleBtn) {
+        themeToggleBtn.addEventListener('click', () => {
+            const isLight = document.body.classList.toggle('light-theme');
+            localStorage.setItem('theme', isLight ? 'light' : 'dark');
+            if (themeIcon) themeIcon.setAttribute('data-lucide', isLight ? 'moon' : 'sun');
+            lucide.createIcons();
+            showToast(`${isLight ? 'Light' : 'Dark'} theme activated!`, 'success');
+        });
+    }
+
+    // Export CSV listener
+    if (exportCsvBtn) {
+        exportCsvBtn.addEventListener('click', exportToCSV);
+    }
     
     // Search event listeners
     searchInput.addEventListener('input', (e) => {
@@ -321,7 +351,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="card-body">
                     ${item.content_html}
                 </div>
-                <footer class="card-footer">
+                <footer class="card-footer" style="gap: 8px;">
+                    <button class="btn btn-secondary btn-sm copy-card-btn" data-id="${item.id}" title="Copy this update to clipboard">
+                        <i data-lucide="copy"></i>
+                        <span>Copy</span>
+                    </button>
                     <button class="btn btn-secondary btn-sm select-toggle-btn" data-id="${item.id}">
                         <i data-lucide="${isSelected ? 'check-square' : 'square'}"></i>
                         <span>${isSelected ? 'Selected' : 'Select to Tweet'}</span>
@@ -340,6 +374,12 @@ document.addEventListener('DOMContentLoaded', () => {
             toggleBtn.addEventListener('click', () => {
                 const currentChecked = selectedReleases.has(item.id);
                 toggleSelection(item.id, !currentChecked);
+            });
+
+            // Card copy event
+            const copyBtn = card.querySelector('.copy-card-btn');
+            copyBtn.addEventListener('click', () => {
+                copyCardContent(item.id);
             });
 
             feedList.appendChild(card);
@@ -699,5 +739,51 @@ document.addEventListener('DOMContentLoaded', () => {
                 setTimeout(() => toast.remove(), 300);
             }
         }, 4000);
+    }
+
+    // Action: Copy single card content to clipboard
+    function copyCardContent(id) {
+        const item = allReleases.find(r => r.id === id);
+        if (!item) return;
+        const copyText = `BigQuery Update (${item.date}) - [${item.type}]:\n${item.content_text}\n\nLink: ${item.link}`;
+        
+        navigator.clipboard.writeText(copyText)
+            .then(() => {
+                showToast('Update details copied to clipboard!', 'success');
+            })
+            .catch(err => {
+                console.error(err);
+                showToast('Failed to copy update details.', 'error');
+            });
+    }
+
+    // Action: Export filtered release notes to CSV
+    function exportToCSV() {
+        if (filteredReleases.length === 0) {
+            showToast('No updates to export!', 'error');
+            return;
+        }
+        const headers = ["Date", "Type", "Description", "URL"];
+        const rows = filteredReleases.map(item => [
+            item.date,
+            item.type,
+            item.content_text,
+            item.link
+        ]);
+        
+        let csvContent = headers.map(h => `"${h.replace(/"/g, '""')}"`).join(",") + "\n";
+        rows.forEach(row => {
+            csvContent += row.map(val => `"${(val || '').replace(/"/g, '""')}"`).join(",") + "\n";
+        });
+        
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `bigquery_release_notes_${new Date().toISOString().slice(0,10)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast('Exported CSV successfully!', 'success');
     }
 });
