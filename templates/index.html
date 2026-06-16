@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BigQuery Release Radar - Feed & Share</title>
+    <meta name="description" content="Stay updated with the latest Google Cloud BigQuery release notes and easily share updates with your network.">
+    <!-- Google Fonts: Plus Jakarta Sans for UI, JetBrains Mono for code snippets -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <div class="app-wrapper">
+        <!-- TOP APP BAR (Mobile & Desktop Header) -->
+        <header class="app-header">
+            <div class="header-logo">
+                <div class="logo-icon">
+                    <i data-lucide="database" class="icon-primary"></i>
+                    <i data-lucide="zap" class="icon-accent"></i>
+                </div>
+                <div class="logo-text">
+                    <h1>BigQuery Release Radar</h1>
+                    <span class="logo-tagline">Track updates & share on X</span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <div class="sync-status" id="syncStatus">
+                    <span class="status-dot online"></span>
+                    <span class="status-text">Connected</span>
+                </div>
+                <button id="refreshBtn" class="btn btn-secondary btn-icon" title="Refresh Release Notes">
+                    <i data-lucide="refresh-cw" id="refreshIcon"></i>
+                    <span class="btn-label">Refresh</span>
+                </button>
+            </div>
+        </header>
+
+        <div class="app-container">
+            <!-- LEFT PANEL: FILTERS & STATS -->
+            <aside class="app-sidebar">
+                <div class="sidebar-section">
+                    <h2 class="section-title"><i data-lucide="search"></i> Search & Filter</h2>
+                    <div class="search-wrapper">
+                        <i data-lucide="search" class="search-icon"></i>
+                        <input type="text" id="searchInput" placeholder="Search updates..." aria-label="Search updates">
+                        <button id="clearSearch" class="clear-btn" style="display: none;" title="Clear Search">
+                            <i data-lucide="x"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h2 class="section-title"><i data-lucide="filter"></i> Category</h2>
+                    <div class="category-filters" id="categoryFilters">
+                        <button class="filter-pill active" data-type="all">
+                            <span class="pill-label">All Updates</span>
+                            <span class="pill-count" id="count-all">0</span>
+                        </button>
+                        <button class="filter-pill" data-type="Feature">
+                            <span class="pill-color feature"></span>
+                            <span class="pill-label">Features</span>
+                            <span class="pill-count" id="count-feature">0</span>
+                        </button>
+                        <button class="filter-pill" data-type="Fix">
+                            <span class="pill-color fix"></span>
+                            <span class="pill-label">Fixes</span>
+                            <span class="pill-count" id="count-fix">0</span>
+                        </button>
+                        <button class="filter-pill" data-type="Issue">
+                            <span class="pill-color issue"></span>
+                            <span class="pill-label">Issues</span>
+                            <span class="pill-count" id="count-issue">0</span>
+                        </button>
+                        <button class="filter-pill" data-type="Deprecation">
+                            <span class="pill-color deprecation"></span>
+                            <span class="pill-label">Deprecations</span>
+                            <span class="pill-count" id="count-deprecation">0</span>
+                        </button>
+                        <button class="filter-pill" data-type="Update">
+                            <span class="pill-color update"></span>
+                            <span class="pill-label">Others</span>
+                            <span class="pill-count" id="count-update">0</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="sidebar-section stats-section">
+                    <h2 class="section-title"><i data-lucide="bar-chart-3"></i> Quick Stats</h2>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <span class="stat-value" id="statTotal">0</span>
+                            <span class="stat-label">Total Items</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-value" id="statLast30">0</span>
+                            <span class="stat-label">Last 30 Days</span>
+                        </div>
+                    </div>
+                    <div class="feed-info">
+                        <div class="feed-source">
+                            <i data-lucide="rss"></i>
+                            <span>Source: BigQuery Feed</span>
+                        </div>
+                        <div class="feed-timestamp" id="lastRefreshedTime">
+                            Last checked: Never
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- CENTER PANEL: RELEASE NOTES FEED -->
+            <main class="feed-content">
+                <div class="feed-header-bar">
+                    <div class="feed-title-area">
+                        <h2 id="feedHeadline">Release Notes</h2>
+                        <span class="results-meta" id="resultsMeta">Loading updates...</span>
+                    </div>
+                    <div class="feed-view-options">
+                        <button id="selectAllBtn" class="btn btn-text btn-sm" title="Select all filtered updates">
+                            <i data-lucide="check-square"></i> Select All
+                        </button>
+                        <button id="clearSelectionBtn" class="btn btn-text btn-sm" style="display: none;" title="Deselect all updates">
+                            <i data-lucide="square"></i> Clear Selection
+                        </button>
+                    </div>
+                </div>
+
+                <!-- FEED LIST CONTAINER -->
+                <div class="feed-list" id="feedList">
+                    <!-- Skeleton loaders will be dynamically placed here by JS -->
+                    <div class="skeleton-card"></div>
+                    <div class="skeleton-card"></div>
+                    <div class="skeleton-card"></div>
+                </div>
+                
+                <!-- EMPTY STATE -->
+                <div class="empty-state" id="emptyState" style="display: none;">
+                    <div class="empty-icon">
+                        <i data-lucide="alert-circle"></i>
+                    </div>
+                    <h3>No updates found</h3>
+                    <p>Try refining your search query or choosing another category filter.</p>
+                    <button class="btn btn-primary" id="resetFiltersBtn">Reset Filters</button>
+                </div>
+            </main>
+
+            <!-- RIGHT PANEL: TWEET COMPOSER -->
+            <aside class="app-composer">
+                <div class="composer-card">
+                    <div class="composer-header">
+                        <h2><i data-lucide="twitter" class="x-icon"></i> Tweet Composer</h2>
+                        <span class="composer-subtitle">Draft and optimize updates for X</span>
+                    </div>
+                    
+                    <div class="composer-body">
+                        <!-- SELECTED ITEMS LIST -->
+                        <div class="composer-section selected-updates-container">
+                            <label class="form-label">
+                                <span>Selected Source Updates</span>
+                                <span class="badge badge-accent" id="selectedCount">0</span>
+                            </label>
+                            <div class="selected-items-list" id="selectedItemsList">
+                                <div class="no-selections-msg">
+                                    <i data-lucide="check-square"></i>
+                                    <p>Select updates from the feed to start drafting your tweet.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TEMPLATE SELECTOR -->
+                        <div class="composer-section">
+                            <label class="form-label">Tweet Style Template</label>
+                            <div class="template-selector">
+                                <button class="template-option active" data-template="feature">
+                                    🚀 Tech/Feature
+                                </button>
+                                <button class="template-option" data-template="bullet">
+                                    📋 List/Bullets
+                                </button>
+                                <button class="template-option" data-template="minimal">
+                                    💡 Minimal
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- EDITABLE TWEET TEXT -->
+                        <div class="composer-section">
+                            <label for="tweetTextArea" class="form-label">Tweet Content</label>
+                            <div class="textarea-wrapper">
+                                <textarea id="tweetTextArea" rows="8" placeholder="Select an update from the feed or write something here..." aria-label="Tweet editor"></textarea>
+                                <button id="autoComposeBtn" class="auto-compose-btn" title="Regenerate from selections">
+                                    <i data-lucide="sparkles"></i>
+                                </button>
+                            </div>
+                            <div class="composer-footer">
+                                <div class="char-count-wrapper">
+                                    <svg class="progress-ring" width="24" height="24">
+                                        <circle class="progress-ring__circle-bg" stroke="#334155" stroke-width="2" fill="transparent" r="9" cx="12" cy="12"/>
+                                        <circle class="progress-ring__circle" id="charProgressCircle" stroke="#6366f1" stroke-width="2" fill="transparent" r="9" cx="12" cy="12"/>
+                                    </svg>
+                                    <span id="charCount" class="char-counter">0 / 280</span>
+                                </div>
+                                <span id="charWarning" class="char-warning-text" style="display: none;">Exceeds X limit!</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="composer-actions">
+                        <button id="copyTweetBtn" class="btn btn-secondary flex-1" disabled>
+                            <i data-lucide="copy"></i> Copy Text
+                        </button>
+                        <button id="tweetBtn" class="btn btn-primary flex-1" disabled>
+                            <i data-lucide="send"></i> Post on X
+                        </button>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Javascript file -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
